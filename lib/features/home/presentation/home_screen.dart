@@ -380,7 +380,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
           color: isSelected ? const Color(0xFFFFEBEE) : Colors.white,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? accentColor.withOpacity(0.1) : Colors.grey.shade200,
+            color: isSelected ? accentColor.withValues(alpha: 0.1) : Colors.grey.shade200,
           ),
         ),
         child: Column(

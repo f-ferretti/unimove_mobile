@@ -58,7 +58,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    print("[DEBUG UI] Avvio chiamata di login tramite AuthController...");
+    debugPrint("[DEBUG UI] Avvio chiamata di login tramite AuthController...");
     final success = await ref.read(authControllerProvider.notifier).login(
       _usernameController.text,
       _passwordController.text,
@@ -312,27 +312,27 @@ class TermsAndConditionsSheet extends StatelessWidget {
             style: TextStyle(color: Colors.black, fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
-          Flexible(
+          const Flexible(
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Privacy dei dati',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
+                  SizedBox(height: 8),
+                  Text(
                     'I tuoi dati personali saranno trattati esclusivamente per le finalità legate all\'erogazione del servizio di carpooling UniMove. Garantiamo la massima riservatezza e il rispetto delle normative vigenti sul trattamento dei dati (GDPR). Le informazioni sul tuo profilo e sui viaggi saranno visibili solo agli utenti registrati della community.',
                     style: TextStyle(fontSize: 15, color: Colors.black54, height: 1.5),
                   ),
-                  const SizedBox(height: 24),
-                  const Text(
+                  SizedBox(height: 24),
+                  Text(
                     'Condizioni d\'uso',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
+                  SizedBox(height: 8),
+                  Text(
                     'Utilizzando UniMove, accetti di condividere i passaggi in modo responsabile e sicuro. Ti impegni a rispettare gli orari e gli accordi presi con gli altri utenti. UniMove è una piattaforma dedicata agli studenti e al personale universitario per facilitare la mobilità sostenibile. Qualsiasi abuso della piattaforma potrà portare alla sospensione dell\'account.',
                     style: TextStyle(fontSize: 15, color: Colors.black54, height: 1.5),
                   ),
