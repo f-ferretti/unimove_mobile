@@ -12,7 +12,7 @@ import '../../shared/widgets/main_scaffold.dart';
 import '../services/auth_service.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authControllerProvider);
+  final listenable = ref.read(routerTransitionListenerProvider);
 
   return GoRouter(
     initialLocation: '/splash',
