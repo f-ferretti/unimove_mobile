@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'auth_controller.dart';
+import '../../../core/services/auth_service.dart';
 
 class WelcomeRoutesScreen extends ConsumerStatefulWidget {
   const WelcomeRoutesScreen({super.key});
@@ -148,7 +148,7 @@ class _WelcomeRoutesScreenState extends ConsumerState<WelcomeRoutesScreen> {
               
               ElevatedButton(
                 onPressed: () async {
-                  await ref.read(authControllerProvider.notifier).completeWelcome();
+                  await ref.read(authServiceProvider).setOnboardingCompleted();
                   if (context.mounted) {
                     context.go('/home');
                   }
@@ -170,7 +170,7 @@ class _WelcomeRoutesScreenState extends ConsumerState<WelcomeRoutesScreen> {
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () async {
-                  await ref.read(authControllerProvider.notifier).completeWelcome();
+                  await ref.read(authServiceProvider).setOnboardingCompleted();
                   if (context.mounted) {
                     context.go('/home');
                   }

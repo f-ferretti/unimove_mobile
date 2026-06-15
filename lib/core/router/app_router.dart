@@ -11,36 +11,24 @@ import '../../features/auth/presentation/auth_controller.dart';
 import '../../shared/widgets/main_scaffold.dart';
 import '../services/auth_service.dart';
 
-/// Un Listenable reattivo per notificare GoRouter quando lo stato di autenticazione cambia
-class RouterTransitionListener extends ChangeNotifier {
-  RouterTransitionListener(Ref ref) {
-    ref.listen(authControllerProvider, (_, __) {
-      notifyListeners();
-    });
-  }
-}
-
-final routerTransitionListenerProvider = Provider((ref) => RouterTransitionListener(ref));
-
 final appRouterProvider = Provider<GoRouter>((ref) {
   final listenable = ref.read(routerTransitionListenerProvider);
 
   return GoRouter(
     initialLocation: '/splash',
-    refreshListenable: listenable,
+    // AuthGuard reattivo: usa lo stato del controller invece di leggere il disco ogni volta
     redirect: (context, state) async {
-      final authState = ref.read(authControllerProvider);
       final status = authState.status;
       final location = state.matchedLocation;
 
-      // Se sta caricando lo stato iniziale della sessione, tieni l'utente sulla splash screen
+      // Se sta caricando lo stato iniziale della sessione, mantieni l'utente sulla splash screen
       if (status == AuthStatus.loading) {
         return '/splash';
       }
 
       final isLoggedIn = status == AuthStatus.authenticated;
 
-      // Se non è loggato e prova ad andare in una rotta che non sia login, rimandalo a login
+      // Se non è loggato e non sta andando al login, forzalo al login
       if (!isLoggedIn) {
         if (location != '/login') {
           return '/login';
@@ -48,7 +36,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      // Se l'utente è loggato e si trova su splash o login:
+      // Se l'utente è loggato e si trova su una rotta iniziale (login o splash)
       if (location == '/login' || location == '/splash') {
         final completed = await ref.read(authServiceProvider).isOnboardingCompleted();
         return completed ? '/home' : '/benvenuto';
