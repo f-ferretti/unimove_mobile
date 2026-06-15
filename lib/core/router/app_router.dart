@@ -11,13 +11,25 @@ import '../../features/auth/presentation/auth_controller.dart';
 import '../../shared/widgets/main_scaffold.dart';
 import '../services/auth_service.dart';
 
+/// Un Listenable reattivo per notificare GoRouter quando lo stato di autenticazione cambia
+class RouterTransitionListener extends ChangeNotifier {
+  RouterTransitionListener(Ref ref) {
+    ref.listen(authControllerProvider, (_, __) {
+      notifyListeners();
+    });
+  }
+}
+
+final routerTransitionListenerProvider = Provider((ref) => RouterTransitionListener(ref));
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   final listenable = ref.read(routerTransitionListenerProvider);
 
   return GoRouter(
     initialLocation: '/splash',
-    // AuthGuard reattivo: usa lo stato del controller invece di leggere il disco ogni volta
+    refreshListenable: listenable,
     redirect: (context, state) async {
+      final authState = ref.read(authControllerProvider);
       final status = authState.status;
       final location = state.matchedLocation;
 
