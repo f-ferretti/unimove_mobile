@@ -6,6 +6,10 @@ import '../../features/home/presentation/home_screen.dart';
 import '../../features/rides/presentation/create_ride_screen.dart';
 import '../../features/rides/presentation/search_ride_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/profile/presentation/edit_personal_info_screen.dart';
+import '../../features/profile/presentation/edit_preferences_screen.dart';
+import '../../features/profile/presentation/edit_iban_screen.dart';
+import '../../features/profile/presentation/settings_screen.dart';
 import '../../features/explore/presentation/explore_screen.dart';
 import '../../features/auth/presentation/welcome_routes_screen.dart';
 import '../../features/auth/presentation/auth_controller.dart';
@@ -82,6 +86,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           String title = 'UniMove';
           if (location == '/home') {
             title = 'Home';
+          } else if (location == '/impostazioni') {
+            title = 'Impostazioni';
           } else if (location == '/esplora') {
             title = 'Esplora';
           } else if (location == '/corse/crea') {
@@ -113,6 +119,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/profilo',
             builder: (context, state) => const ProfileScreen(),
+            routes: [
+              GoRoute(
+                path: 'edit-info',
+                builder: (context, state) => const EditPersonalInfoScreen(),
+              ),
+              GoRoute(
+                path: 'edit-preferences',
+                builder: (context, state) => const EditPreferencesScreen(),
+              ),
+              GoRoute(
+                path: 'edit-iban',
+                builder: (context, state) => const EditIbanScreen(),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/impostazioni',
+            builder: (context, state) => const SettingsScreen(),
           ),
           GoRoute(
             path: '/esplora',
