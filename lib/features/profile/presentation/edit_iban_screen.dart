@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../auth/presentation/auth_controller.dart';
-import '../../auth/domain/user_profile.dart';
 import 'profile_controller.dart';
 
 class EditIbanScreen extends ConsumerStatefulWidget {
@@ -14,15 +13,16 @@ class EditIbanScreen extends ConsumerStatefulWidget {
 
 class _EditIbanScreenState extends ConsumerState<EditIbanScreen> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _ibanController;
-  late TextEditingController _holderController;
+  late final TextEditingController _ibanController;
+  late final TextEditingController _holderController;
+  bool _isSaving = false;
+  bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
-    final profile = ref.read(userProfileProvider).value;
-    _ibanController = TextEditingController(text: profile?.iban);
-    _holderController = TextEditingController(text: profile?.ibanHolder);
+    _ibanController = TextEditingController();
+    _holderController = TextEditingController();
   }
 
   @override
@@ -32,122 +32,222 @@ class _EditIbanScreenState extends ConsumerState<EditIbanScreen> {
     super.dispose();
   }
 
-  Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final currentProfile = ref.read(userProfileProvider).value;
-    if (currentProfile == null) return;
-
-    final updatedProfile = UserProfile(
-      username: currentProfile.username,
-      fullName: currentProfile.fullName,
-      email: currentProfile.email,
-      role: currentProfile.role,
-      phone: currentProfile.phone,
-      university: currentProfile.university,
-      degreeCourse: currentProfile.degreeCourse,
-      department: currentProfile.department,
-      enrollmentYear: currentProfile.enrollmentYear,
-      studentId: currentProfile.studentId,
-      preferences: currentProfile.preferences,
-      iban: _ibanController.text.trim(),
-      ibanHolder: _holderController.text.trim(),
-      favoriteRoutes: currentProfile.favoriteRoutes,
-      upcomingRides: currentProfile.upcomingRides,
-    );
-
-    final success = await ref.read(profileControllerProvider.notifier).updateProfile(updatedProfile);
-    if (success && mounted) {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('IBAN aggiornato correttamente'), backgroundColor: AppColors.universityGreen),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref.watch(profileControllerProvider).isLoading;
+    final userProfileAsync = ref.watch(userProfileProvider);
+
+    // Inizializza i controller con i valori correnti
+    userProfileAsync.whenData((profile) {
+      if (!_initialized && profile != null) {
+        _ibanController.text = profile.iban ?? '';
+        _holderController.text = profile.ibanHolder ?? '';
+        _initialized = true;
+      }
+    });
 
     return Scaffold(
       backgroundColor: AppColors.deepBlack,
       appBar: AppBar(
-        title: const Text('Metodo di pagamento'),
+        title: const Text('Informazioni bancarie'),
+        backgroundColor: AppColors.deepBlack,
+        elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Inserisci il tuo IBAN per poter ricevere i pagamenti dei passeggeri.',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+      body: userProfileAsync.when(
+        data: (profile) {
+          if (profile == null) {
+            return const Center(
+              child: Text(
+                'Nessun dato profilo disponibile',
+                style: TextStyle(color: AppColors.textSecondary),
               ),
-              const SizedBox(height: 32),
-              
-              TextFormField(
-                controller: _holderController,
-                style: const TextStyle(color: AppColors.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'Intestatario conto',
-                  prefixIcon: Icon(Icons.person_outline, color: AppColors.universityGreen),
-                ),
-                validator: (val) => val == null || val.isEmpty ? 'Inserisci l\'intestatario' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _ibanController,
-                style: const TextStyle(color: AppColors.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'IBAN',
-                  prefixIcon: Icon(Icons.account_balance_outlined, color: AppColors.universityGreen),
-                ),
-                validator: (val) {
-                  if (val == null || val.isEmpty) return 'Inserisci l\'IBAN';
-                  // Simple IBAN validation (can be improved)
-                  if (val.length < 15) return 'IBAN non valido';
-                  return null;
-                },
-              ),
-              
-              const SizedBox(height: 48),
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: isLoading ? null : _save,
-                  child: isLoading 
-                    ? const CircularProgressIndicator(color: Colors.white) 
-                    : const Text('Salva IBAN', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.blue, size: 20),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'I tuoi dati bancari sono cifrati e gestiti in sicurezza.',
-                        style: TextStyle(color: Colors.blue, fontSize: 12),
+            );
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Dati per i rimborsi',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Inserisci il tuo IBAN per consentire agli altri utenti di rimborsarti le spese di viaggio.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // IBAN Field
+                  const Text(
+                    'CODICE IBAN',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.universityGreen,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: _ibanController,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 16),
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: InputDecoration(
+                      hintText: 'IT00 X 00000 00000 000000000000',
+                      prefixIcon: const Icon(Icons.account_balance_outlined, color: AppColors.textMuted),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: Colors.white10),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: AppColors.universityGreen, width: 2),
                       ),
                     ),
-                  ],
-                ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Inserisci l\'IBAN';
+                      }
+                      final cleaned = value.replaceAll(RegExp(r'\s+'), '').toUpperCase();
+                      if (cleaned.startsWith('IT') && cleaned.length != 27) {
+                        return 'L\'IBAN italiano deve essere di 27 caratteri (attuale: ${cleaned.length})';
+                      }
+                      if (cleaned.length < 15 || cleaned.length > 34) {
+                        return 'Lunghezza IBAN non valida';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  // IBAN Holder Field
+                  const Text(
+                    'INTESTATARIO CONTO',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.universityGreen,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: _holderController,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 16),
+                    decoration: InputDecoration(
+                      hintText: 'Nome e Cognome dell\'intestatario',
+                      prefixIcon: const Icon(Icons.person_outline, color: AppColors.textMuted),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: Colors.white10),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: AppColors.universityGreen, width: 2),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Inserisci l\'intestatario del conto';
+                      }
+                      if (value.trim().split(' ').length < 2) {
+                        return 'Inserisci sia il nome che il cognome';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 40),
+
+                  // Save Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : _saveIban,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.universityGreen,
+                        disabledBackgroundColor: AppColors.universityGreen.withValues(alpha: 0.5),
+                      ),
+                      child: _isSaving
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Salva modifiche',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
+          );
+        },
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.universityGreen),
+        ),
+        error: (err, stack) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Text(
+              'Errore nel caricamento dei dati: $err',
+              style: const TextStyle(color: Colors.redAccent),
+            ),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _saveIban() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+    
+    // Rimuovi spazi extra e metti tutto maiuscolo per l'IBAN
+    final cleanedIban = _ibanController.text.replaceAll(RegExp(r'\s+'), '').toUpperCase();
+    final holder = _holderController.text.trim();
+
+    final success = await ref
+        .read(profileControllerProvider.notifier)
+        .updateIban(cleanedIban, holder);
+        
+    setState(() => _isSaving = false);
+
+    if (mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Informazioni bancarie salvate!'),
+            backgroundColor: AppColors.universityGreen,
+          ),
+        );
+        Navigator.of(context).pop();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Errore durante il salvataggio dei dati'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
   }
 }

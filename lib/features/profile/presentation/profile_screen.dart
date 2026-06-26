@@ -1,9 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../auth/presentation/auth_controller.dart';
-import '../../auth/domain/user_profile.dart';
-import '../../../shared/widgets/skeleton.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -14,276 +13,263 @@ class ProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.deepBlack,
-      body: SafeArea(
+      body: RefreshIndicator(
+        onRefresh: () => ref.refresh(userProfileProvider.future),
+        color: AppColors.universityGreen,
         child: userProfileAsync.when(
-          data: (profile) => profile == null 
-            ? const Center(child: Text('Profilo non trovato')) 
-            : _buildProfileContent(context, ref, profile),
-          loading: () => _buildLoadingSkeleton(),
-          error: (err, _) => Center(child: Text('Errore: $err')),
+          data: (profile) {
+            if (profile == null) {
+              return const Center(
+                child: Text(
+                  'Nessun dato profilo disponibile',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              );
+            }
+
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+              child: Column(
+                children: [
+                  // Profile Header Card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceDark,
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildAvatar(profile.avatarUrl),
+                        const SizedBox(height: 16),
+                        Text(
+                          profile.fullName,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.universityGreen.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            _formatRole(profile.role),
+                            style: const TextStyle(
+                              color: AppColors.universityGreen,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Info Cards (Read-only Display)
+                  _buildInfoCard(
+                    title: 'Informazioni personali',
+                    icon: Icons.person_outline,
+                    content: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildDetailItem('Nome completo', profile.fullName),
+                        const SizedBox(height: 12),
+                        _buildDetailItem('Email istituzionale', profile.email),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  _buildInfoCard(
+                    title: 'Preferenze di viaggio',
+                    icon: Icons.chat_bubble_outline,
+                    content: Text(
+                      (profile.travelPreferences != null && profile.travelPreferences!.trim().isNotEmpty)
+                          ? profile.travelPreferences!
+                          : 'Nessuna preferenza specificata',
+                      style: TextStyle(
+                        color: (profile.travelPreferences != null && profile.travelPreferences!.trim().isNotEmpty)
+                            ? AppColors.textSecondary
+                            : AppColors.textMuted,
+                        fontSize: 14,
+                        fontStyle: (profile.travelPreferences != null && profile.travelPreferences!.trim().isNotEmpty)
+                            ? FontStyle.normal
+                            : FontStyle.italic,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  _buildInfoCard(
+                    title: 'Informazioni bancarie',
+                    icon: Icons.account_balance_wallet_outlined,
+                    content: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildDetailItem('Intestatario conto', profile.ibanHolder ?? 'N/D'),
+                        const SizedBox(height: 12),
+                        _buildDetailItem(
+                          'IBAN',
+                          _maskIban(profile.iban),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            );
+          },
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: AppColors.universityGreen),
+          ),
+          error: (err, stack) => Center(
+            child: Text(
+              'Errore nel caricamento del profilo: $err',
+              style: const TextStyle(color: Colors.redAccent),
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildProfileContent(BuildContext context, WidgetRef ref, UserProfile profile) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Avatar and Name Section
-          _buildHeader(profile, context),
-          const SizedBox(height: 32),
-          
-          // Info Card (Contact + Preferences)
-          _buildInfoCard(profile),
-          
-          const SizedBox(height: 32),
-          
-          // Reviews Section
-          _buildReviewsSection(profile),
-          
-          const SizedBox(height: 48),
-          
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: () => ref.read(authControllerProvider.notifier).logout(),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.redAccent.withValues(alpha: 0.7),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: const Text('Logout', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader(UserProfile profile, BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(3),
+  Widget _buildAvatar(String? avatarUrl) {
+    if (avatarUrl != null && avatarUrl.startsWith('data:image')) {
+      try {
+        final base64Str = avatarUrl.split(',').last;
+        final bytes = base64Decode(base64Str);
+        return Container(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.universityGreen.withValues(alpha: 0.5), width: 2),
+            border: Border.all(color: AppColors.universityGreen, width: 2),
           ),
           child: CircleAvatar(
             radius: 50,
-            backgroundColor: AppColors.surfaceDark,
-            backgroundImage: profile.avatarUrl != null ? NetworkImage(profile.avatarUrl!) : null,
-            child: profile.avatarUrl == null 
-              ? const Icon(Icons.person, size: 60, color: AppColors.textMuted) 
-              : null,
+            backgroundImage: MemoryImage(bytes),
           ),
-        ),
-        const SizedBox(height: 16),
+        );
+      } catch (_) {}
+    }
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white10, width: 2),
+      ),
+      child: const CircleAvatar(
+        radius: 50,
+        backgroundColor: AppColors.surfaceDark,
+        child: Icon(Icons.person, size: 50, color: AppColors.universityGreen),
+      ),
+    );
+  }
+
+  String _formatRole(String role) {
+    switch (role.toUpperCase()) {
+      case 'STUDENT': return 'Studente';
+      case 'PROFESSOR': return 'Docente';
+      case 'STAFF': return 'Personale PTA';
+      default: return role;
+    }
+  }
+
+  String _maskIban(String? iban) {
+    if (iban == null || iban.trim().isEmpty) {
+      return 'Nessun IBAN salvato';
+    }
+    final clean = iban.replaceAll(RegExp(r'\s+'), '');
+    if (clean.length < 8) return clean;
+    final start = clean.substring(0, 4);
+    final end = clean.substring(clean.length - 4);
+    return '$start •••• •••• •••• $end';
+  }
+
+  Widget _buildDetailItem(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         Text(
-          profile.fullName,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+          label.toUpperCase(),
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: AppColors.universityGreen,
+            letterSpacing: 1.0,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
-          profile.role == 'DRIVER' ? 'Autista' : 'Studente',
-          style: const TextStyle(fontSize: 14, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.universityGreen.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.verified, size: 14, color: AppColors.universityGreen),
-              SizedBox(width: 4),
-              Text(
-                'Studente verificato',
-                style: TextStyle(color: AppColors.universityGreen, fontSize: 12, fontWeight: FontWeight.bold),
-              ),
-            ],
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            color: AppColors.textSecondary,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildInfoCard(UserProfile profile) {
+  Widget _buildInfoCard({
+    required String title,
+    required IconData icon,
+    required Widget content,
+  }) {
     return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         color: AppColors.surfaceDark,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
-      child: Column(
-        children: [
-          // Contact Info
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                const Icon(Icons.email_outlined, color: AppColors.textMuted, size: 22),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Informazioni di contatto',
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        profile.email,
-                        style: const TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          Divider(color: Colors.white.withValues(alpha: 0.05), height: 1),
-          
-          // Travel Preferences Summary
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.favorite_border, color: AppColors.textMuted, size: 22),
-                    SizedBox(width: 16),
-                    Text(
-                      'Preferenze di viaggio',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    _buildPreferenceBox(Icons.music_note, profile.preferences?.music),
-                    _buildPreferenceBox(Icons.chat_bubble_outline, profile.preferences?.talk),
-                    _buildPreferenceBox(Icons.pets, profile.preferences?.animals),
-                    _buildPreferenceBox(Icons.smoke_free, profile.preferences?.smoke),
-                    _buildPreferenceBox(Icons.shopping_bag_outlined, PreferenceLevel.neutral), // Bagaglio
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPreferenceBox(IconData icon, PreferenceLevel? level) {
-    Color iconColor = AppColors.textMuted;
-    if (level == PreferenceLevel.like) iconColor = AppColors.universityGreen;
-    if (level == PreferenceLevel.dislike) iconColor = Colors.redAccent.withValues(alpha: 0.5);
-
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: AppColors.deepBlack,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.03)),
-      ),
-      child: Icon(icon, color: iconColor, size: 20),
-    );
-  }
-
-  Widget _buildReviewsSection(UserProfile profile) {
-    return Column(
-      children: [
-        const Text(
-          'Recensioni',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-        ),
-        const SizedBox(height: 16),
-        if (profile.reviews.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Text(
-              'Nessuna recensione ancora',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 14),
-            ),
-          )
-        else
-          ...profile.reviews.map((review) => _buildReviewCard(review)),
-      ],
-    );
-  }
-
-  Widget _buildReviewCard(UserReview review) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceDark,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: AppColors.deepBlack,
-            backgroundImage: review.authorAvatar != null ? NetworkImage(review.authorAvatar!) : null,
-            child: review.authorAvatar == null 
-              ? const Icon(Icons.person, size: 20, color: AppColors.textMuted) 
-              : null,
+          // Icon
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.deepBlack,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              icon,
+              color: AppColors.universityGreen,
+              size: 24,
+            ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 18),
+
+          // Content
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'da ${review.authorName}',
-                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-                const SizedBox(height: 2),
-                Row(
-                  children: List.generate(5, (index) => Icon(
-                    index < review.rating ? Icons.star : Icons.star_border,
-                    size: 14,
-                    color: index < review.rating ? Colors.amber : AppColors.textMuted,
-                  )),
-                ),
+                const SizedBox(height: 12),
+                content,
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLoadingSkeleton() {
-    return const Padding(
-      padding: EdgeInsets.all(24.0),
-      child: Column(
-        children: [
-          Skeleton(width: 100, height: 100, borderRadius: 50),
-          SizedBox(height: 24),
-          Skeleton(width: 200, height: 24),
-          SizedBox(height: 40),
-          Skeleton(width: double.infinity, height: 150, borderRadius: 20),
-          SizedBox(height: 24),
-          Skeleton(width: 120, height: 20),
-          SizedBox(height: 16),
-          Skeleton(width: double.infinity, height: 80, borderRadius: 16),
         ],
       ),
     );
