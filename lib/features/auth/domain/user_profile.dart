@@ -74,6 +74,30 @@ class UserProfile {
     required this.upcomingRides,
   });
 
+  UserProfile copyWith({
+    String? username,
+    String? fullName,
+    String? email,
+    String? role,
+    String? avatarUrl,
+    String? travelPreferences,
+    String? iban,
+    String? ibanHolder,
+    List<Ride>? upcomingRides,
+  }) {
+    return UserProfile(
+      username: username ?? this.username,
+      fullName: fullName ?? this.fullName,
+      email: email ?? this.email,
+      role: role ?? this.role,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      travelPreferences: travelPreferences ?? this.travelPreferences,
+      iban: iban ?? this.iban,
+      ibanHolder: ibanHolder ?? this.ibanHolder,
+      upcomingRides: upcomingRides ?? this.upcomingRides,
+    );
+  }
+
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
       username: json['username'] as String? ?? '',
