@@ -246,11 +246,13 @@ class UserReview {
 
   factory UserReview.fromJson(Map<String, dynamic> json) {
     return UserReview(
-      authorName: json['authorName'] as String? ?? 'Utente Anonimo',
+      authorName: json['reviewerFullName'] as String? ?? json['authorName'] as String? ?? 'Utente Anonimo',
       authorAvatar: json['authorAvatar'] as String?,
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       comment: json['comment'] as String? ?? '',
-      date: json['date'] != null ? DateTime.parse(json['date'] as String) : DateTime.now(),
+      date: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : (json['date'] != null ? DateTime.parse(json['date'] as String) : DateTime.now()),
     );
   }
 }
