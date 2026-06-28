@@ -36,12 +36,12 @@ class ProfileScreen extends ConsumerWidget {
             }
 
             // Parsing delle preferenze di viaggio
-            final prefsStr = (profile.travelPreferences ?? '').toLowerCase();
-            final bool hasMusic = !prefsStr.contains('no music') && !prefsStr.contains('music:0') && !prefsStr.contains('no musica');
-            final bool hasTalk = !prefsStr.contains('no talk') && !prefsStr.contains('talk:0') && !prefsStr.contains('no chiacchiere') && !prefsStr.contains('silenzio');
-            final bool hasAnimals = !prefsStr.contains('no animal') && !prefsStr.contains('animals:0') && !prefsStr.contains('no cani') && !prefsStr.contains('no gatti');
-            final bool hasSmoke = !prefsStr.contains('no smoke') && !prefsStr.contains('smoke:0') && !prefsStr.contains('no fumo') && !prefsStr.contains('non fumo');
-            final bool hasAc = !prefsStr.contains('no ac') && !prefsStr.contains('no aria condizionata') && !prefsStr.contains('aria condizionata:0');
+            final prefs = TravelPreferences.fromString(profile.travelPreferences ?? '');
+            final bool hasMusic = prefs.music != PreferenceLevel.dislike;
+            final bool hasTalk = prefs.talk != PreferenceLevel.dislike;
+            final bool hasAnimals = prefs.animals != PreferenceLevel.dislike;
+            final bool hasSmoke = prefs.smoke == PreferenceLevel.like;
+            final bool hasAc = prefs.ac != PreferenceLevel.dislike;
 
             return SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -170,7 +170,7 @@ class ProfileScreen extends ConsumerWidget {
                                       _buildPreferenceBox(Icons.music_note_outlined, hasMusic),
                                       _buildPreferenceBox(Icons.forum_outlined, hasTalk),
                                       _buildPreferenceBox(Icons.pets_outlined, hasAnimals),
-                                      _buildPreferenceBox(Icons.smoke_free_outlined, hasSmoke),
+                                      _buildPreferenceBox(Icons.smoking_rooms_outlined, hasSmoke),
                                       _buildPreferenceBox(Icons.ac_unit_outlined, hasAc),
                                     ],
                                   ),
