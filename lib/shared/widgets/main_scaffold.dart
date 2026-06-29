@@ -23,7 +23,7 @@ class MainScaffold extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.menu, color: Colors.white),
-          onPressed: () {},
+          onPressed: () => context.go('/impostazioni'),
         ),
         title: Text(
           title,

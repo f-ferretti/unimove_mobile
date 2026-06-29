@@ -4,6 +4,7 @@ import '../../../core/services/api_client.dart';
 import '../../../core/services/auth_service.dart';
 
 import '../domain/user_profile.dart';
+import '../../profile/presentation/profile_controller.dart';
 
 /// Stato dell'autenticazione
 enum AuthStatus { authenticated, unauthenticated, loading }
@@ -137,16 +138,12 @@ final userProfileProvider = FutureProvider<UserProfile?>((ref) async {
   if (authState.status != AuthStatus.authenticated) {
     return null;
   }
-  try {
-    final apiClient = ref.read(apiClientProvider);
-    final response = await apiClient.dio.get('users/me');
-    if (response.statusCode == 200 && response.data != null) {
-      return UserProfile.fromJson(response.data as Map<String, dynamic>);
-    }
-    return null;
-  } catch (_) {
-    return null;
-  }
+  final profileState = ref.watch(profileControllerProvider);
+  return profileState.when(
+    data: (profile) => profile,
+    error: (err, stack) => Future.error(err, stack),
+    loading: () => ref.read(profileControllerProvider.notifier).fetchProfile(),
+  );
 });
 
 final userNameProvider = FutureProvider<String?>((ref) async {

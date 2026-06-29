@@ -65,7 +65,7 @@ class UserProfile {
   final String? enrollmentYear;
   final String? studentId;
   final String? avatarUrl;
-  final TravelPreferences? preferences;
+  final String? travelPreferences;
   final String? iban;
   final String? ibanHolder;
   final List<String> favoriteRoutes;
@@ -86,13 +86,57 @@ class UserProfile {
     this.enrollmentYear,
     this.studentId,
     this.avatarUrl,
-    this.preferences,
+    this.travelPreferences,
     this.iban,
     this.ibanHolder,
     required this.favoriteRoutes,
     required this.upcomingRides,
     this.reviews = const [],
   });
+
+  UserProfile copyWith({
+    String? username,
+    String? fullName,
+    String? email,
+    String? role,
+    String? phone,
+    String? gender,
+    String? birthDate,
+    String? university,
+    String? degreeCourse,
+    String? department,
+    String? enrollmentYear,
+    String? studentId,
+    String? avatarUrl,
+    String? travelPreferences,
+    String? iban,
+    String? ibanHolder,
+    List<String>? favoriteRoutes,
+    List<Ride>? upcomingRides,
+    List<UserReview>? reviews,
+  }) {
+    return UserProfile(
+      username: username ?? this.username,
+      fullName: fullName ?? this.fullName,
+      email: email ?? this.email,
+      role: role ?? this.role,
+      phone: phone ?? this.phone,
+      gender: gender ?? this.gender,
+      birthDate: birthDate ?? this.birthDate,
+      university: university ?? this.university,
+      degreeCourse: degreeCourse ?? this.degreeCourse,
+      department: department ?? this.department,
+      enrollmentYear: enrollmentYear ?? this.enrollmentYear,
+      studentId: studentId ?? this.studentId,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      travelPreferences: travelPreferences ?? this.travelPreferences,
+      iban: iban ?? this.iban,
+      ibanHolder: ibanHolder ?? this.ibanHolder,
+      favoriteRoutes: favoriteRoutes ?? this.favoriteRoutes,
+      upcomingRides: upcomingRides ?? this.upcomingRides,
+      reviews: reviews ?? this.reviews,
+    );
+  }
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
@@ -109,9 +153,7 @@ class UserProfile {
       enrollmentYear: json['enrollmentYear'] as String?,
       studentId: json['studentId'] as String?,
       avatarUrl: json['avatarUrl'] as String?,
-      preferences: json['travelPreferences'] != null
-          ? TravelPreferences.fromString(json['travelPreferences'] as String)
-          : null,
+      travelPreferences: json['travelPreferences'] as String?,
       iban: json['iban'] as String?,
       ibanHolder: json['ibanHolder'] as String?,
       favoriteRoutes: (json['favoriteRoutes'] as List<dynamic>?)?.map((e) => e as String).toList() ?? [],
@@ -125,7 +167,6 @@ class UserProfile {
           [],
     );
   }
-  // ... rest of the class
 
   Map<String, dynamic> toJson() {
     return {
@@ -138,7 +179,7 @@ class UserProfile {
       'department': department,
       'enrollmentYear': enrollmentYear,
       'studentId': studentId,
-      'travelPreferences': preferences?.toString(),
+      'travelPreferences': travelPreferences,
       'iban': iban,
       'ibanHolder': ibanHolder,
       'favoriteRoutes': favoriteRoutes,
@@ -151,21 +192,24 @@ class TravelPreferences {
   final PreferenceLevel talk;
   final PreferenceLevel animals;
   final PreferenceLevel smoke;
+  final PreferenceLevel ac;
 
   TravelPreferences({
     this.music = PreferenceLevel.neutral,
     this.talk = PreferenceLevel.neutral,
     this.animals = PreferenceLevel.neutral,
     this.smoke = PreferenceLevel.neutral,
+    this.ac = PreferenceLevel.neutral,
   });
 
   factory TravelPreferences.fromString(String prefStr) {
-    // Expected format: "music:1,talk:2,animals:0,smoke:0" or similar
+    // Expected format: "music:1,talk:2,animals:0,smoke:0,ac:1" or similar
     final parts = prefStr.split(',');
     PreferenceLevel music = PreferenceLevel.neutral;
     PreferenceLevel talk = PreferenceLevel.neutral;
     PreferenceLevel animals = PreferenceLevel.neutral;
     PreferenceLevel smoke = PreferenceLevel.neutral;
+    PreferenceLevel ac = PreferenceLevel.neutral;
 
     for (var part in parts) {
       final kv = part.split(':');
@@ -177,14 +221,15 @@ class TravelPreferences {
         if (key == 'talk') talk = level;
         if (key == 'animals') animals = level;
         if (key == 'smoke') smoke = level;
+        if (key == 'ac') ac = level;
       }
     }
-    return TravelPreferences(music: music, talk: talk, animals: animals, smoke: smoke);
+    return TravelPreferences(music: music, talk: talk, animals: animals, smoke: smoke, ac: ac);
   }
 
   @override
   String toString() {
-    return 'music:${music.value},talk:${talk.value},animals:${animals.value},smoke:${smoke.value}';
+    return 'music:${music.value},talk:${talk.value},animals:${animals.value},smoke:${smoke.value},ac:${ac.value}';
   }
 }
 
@@ -205,11 +250,13 @@ class UserReview {
 
   factory UserReview.fromJson(Map<String, dynamic> json) {
     return UserReview(
-      authorName: json['authorName'] as String? ?? 'Utente Anonimo',
+      authorName: json['reviewerFullName'] as String? ?? json['authorName'] as String? ?? 'Utente Anonimo',
       authorAvatar: json['authorAvatar'] as String?,
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       comment: json['comment'] as String? ?? '',
-      date: json['date'] != null ? DateTime.parse(json['date'] as String) : DateTime.now(),
+      date: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : (json['date'] != null ? DateTime.parse(json['date'] as String) : DateTime.now()),
     );
   }
 }

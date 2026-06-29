@@ -1,67 +1,88 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
 import '../../../core/services/api_client.dart';
-import '../../auth/presentation/auth_controller.dart';
 import '../../auth/domain/user_profile.dart';
 
-final profileControllerProvider = StateNotifierProvider<ProfileController, AsyncValue<void>>((ref) {
-  return ProfileController(ref);
-});
+class ProfileController extends StateNotifier<AsyncValue<UserProfile?>> {
+  final ApiClient _apiClient;
 
-class ProfileController extends StateNotifier<AsyncValue<void>> {
-  final Ref _ref;
+  ProfileController(this._apiClient) : super(const AsyncValue.loading());
 
-  ProfileController(this._ref) : super(const AsyncValue.data(null));
-
-  Future<bool> updateProfile(UserProfile updatedProfile) async {
-    state = const AsyncValue.loading();
+  Future<UserProfile?> fetchProfile() async {
+    if (state.value == null) {
+      state = const AsyncValue.loading();
+    }
     try {
-      final apiClient = _ref.read(apiClientProvider);
-      final response = await apiClient.dio.put(
-        'users/me',
-        data: updatedProfile.toJson(),
-      );
+      final response = await _apiClient.dio.get('users/me');
+      if (response.statusCode == 200 && response.data != null) {
+        var profile = UserProfile.fromJson(response.data as Map<String, dynamic>);
+        try {
+          final reviewsResponse = await _apiClient.dio.get('reviews/user/${profile.username}');
+          if (reviewsResponse.statusCode == 200 && reviewsResponse.data != null) {
+            final reviewsList = (reviewsResponse.data as List<dynamic>)
+                .map((e) => UserReview.fromJson(e as Map<String, dynamic>))
+                .toList();
+            profile = profile.copyWith(reviews: reviewsList);
+          }
+        } catch (e) {
+          // Se il recupero delle recensioni fallisce, procediamo comunque con il profilo
+          debugPrint('Errore nel caricamento delle recensioni: $e');
+        }
+        state = AsyncValue.data(profile);
+        return profile;
+      }
+      throw Exception('Impossibile caricare il profilo');
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack);
+      rethrow;
+    }
+  }
 
+  Future<bool> updatePreferences(String travelPreferences) async {
+    final currentProfile = state.value;
+    if (currentProfile == null) return false;
+
+    try {
+      final response = await _apiClient.dio.put(
+        'users/me/preferences',
+        data: {'travelPreferences': travelPreferences},
+      );
       if (response.statusCode == 200) {
-        state = const AsyncValue.data(null);
-        _ref.invalidate(userProfileProvider);
+        final updatedProfile = currentProfile.copyWith(travelPreferences: travelPreferences);
+        state = AsyncValue.data(updatedProfile);
         return true;
       }
-      state = AsyncValue.error('Errore durante l\'aggiornamento del profilo', StackTrace.current);
-      return false;
-    } on DioException catch (e) {
-      final message = e.response?.data?['message'] ?? 'Errore di rete durante l\'aggiornamento';
-      state = AsyncValue.error(message, StackTrace.current);
       return false;
     } catch (e) {
-      state = AsyncValue.error(e.toString(), StackTrace.current);
       return false;
     }
   }
 
-  Future<bool> updateFavoriteRoutes(List<String> routes) async {
-    state = const AsyncValue.loading();
-    try {
-      final apiClient = _ref.read(apiClientProvider);
-      final response = await apiClient.dio.patch(
-        'users/me',
-        data: {'favoriteRoutes': routes},
-      );
+  Future<bool> updateIban(String iban, String ibanHolder) async {
+    final currentProfile = state.value;
+    if (currentProfile == null) return false;
 
+    try {
+      final response = await _apiClient.dio.put(
+        'users/me/iban',
+        data: {
+          'iban': iban,
+          'ibanHolder': ibanHolder,
+        },
+      );
       if (response.statusCode == 200) {
-        state = const AsyncValue.data(null);
-        _ref.invalidate(userProfileProvider);
+        final updatedProfile = currentProfile.copyWith(iban: iban, ibanHolder: ibanHolder);
+        state = AsyncValue.data(updatedProfile);
         return true;
       }
-      state = AsyncValue.error('Errore durante l\'aggiornamento delle tratte', StackTrace.current);
-      return false;
-    } on DioException catch (e) {
-      final message = e.response?.data?['message'] ?? 'Errore di rete';
-      state = AsyncValue.error(message, StackTrace.current);
       return false;
     } catch (e) {
-      state = AsyncValue.error(e.toString(), StackTrace.current);
       return false;
     }
   }
 }
+
+final profileControllerProvider = StateNotifierProvider<ProfileController, AsyncValue<UserProfile?>>((ref) {
+  final apiClient = ref.watch(apiClientProvider);
+  return ProfileController(apiClient);
+});
