@@ -6,6 +6,7 @@ import '../../../core/services/api_client.dart';
 import '../../../core/data/comuni_molise.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../auth/presentation/auth_controller.dart';
+import 'my_rides_controller.dart';
 
 class CreateRideScreen extends ConsumerStatefulWidget {
   const CreateRideScreen({super.key});
@@ -151,8 +152,9 @@ class _CreateRideScreenState extends ConsumerState<CreateRideScreen> {
       );
 
       if (response.statusCode == 200 && mounted) {
-        // Invalida il profilo utente per aggiornare la lista delle corse in Home
+        // Invalida il profilo utente e le corse del guidatore per aggiornare la lista delle corse in Home
         ref.invalidate(userProfileProvider);
+        ref.invalidate(myRidesProvider);
 
         // Mostra Dialog di successo
         showDialog(
