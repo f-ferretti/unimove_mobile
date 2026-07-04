@@ -46,7 +46,7 @@ class Ride {
       totalSeats: json['totalSeats'] as int? ?? 0,
       availableSeats: json['availableSeats'] as int? ?? 0,
       travelPreferences: json['travelPreferences'] as String?,
-      status: json['status'] as String? ?? 'ACTIVE',
+      status: json['status'] as String? ?? 'OPEN',
     );
   }
 }
