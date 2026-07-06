@@ -399,7 +399,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         final myRidesAsync = ref.watch(myRidesProvider);
         return myRidesAsync.when(
           data: (rides) {
-            if (rides.isEmpty) {
+            // Mostra solo le corse attive: OPEN e IN_PROGRESS
+            final activeRides = rides.where((r) =>
+              r.status == 'OPEN' || r.status == 'IN_PROGRESS'
+            ).toList();
+            if (activeRides.isEmpty) {
               return const Center(
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 40),
@@ -418,7 +422,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       SizedBox(height: 8),
                       Text(
-                        'Non hai ancora corse create.',
+                        'Non hai ancora corse attive.',
                         style: TextStyle(
                           fontSize: 14,
                           color: AppColors.textSecondary,
@@ -430,7 +434,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               );
             }
             return Column(
-              children: rides.map((ride) => _buildDriverRideCard(ride)).toList(),
+              children: activeRides.map((ride) => _buildDriverRideCard(ride)).toList(),
             );
           },
           loading: () => Column(
@@ -463,7 +467,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         final myBookingsAsync = ref.watch(myBookingsProvider);
         return myBookingsAsync.when(
           data: (bookings) {
-            if (bookings.isEmpty) {
+            // Il provider già filtra le booking attive; questo è un secondo livello di sicurezza
+            final activeBookings = bookings.where((b) {
+              final rideStatus = b.ride?.status;
+              if (rideStatus == null) return false; // corsa non trovata = completata
+              return rideStatus == 'OPEN' || rideStatus == 'IN_PROGRESS';
+            }).toList();
+            if (activeBookings.isEmpty) {
               return const Center(
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 40),
@@ -494,7 +504,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               );
             }
             return Column(
-              children: bookings.map((b) => _buildPassengerBookingCard(b)).toList(),
+              children: activeBookings.map((b) => _buildPassengerBookingCard(b)).toList(),
             );
           },
           loading: () => Column(

@@ -5,14 +5,24 @@ import '../../auth/domain/user_profile.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../home/presentation/home_screen.dart';
 
+// Il backend supporta ?status= su GET /rides/my
+// Richiediamo separatamente OPEN e IN_PROGRESS per avere solo le corse attive
 final myRidesProvider = FutureProvider<List<Ride>>((ref) async {
   final apiClient = ref.watch(apiClientProvider);
-  final response = await apiClient.dio.get('rides/my');
-  if (response.statusCode == 200 && response.data != null) {
-    final list = response.data as List<dynamic>;
-    return list.map((e) => Ride.fromJson(e as Map<String, dynamic>)).toList();
+  final responses = await Future.wait([
+    apiClient.dio.get('rides/my', queryParameters: {'status': 'OPEN'}),
+    apiClient.dio.get('rides/my', queryParameters: {'status': 'IN_PROGRESS'}),
+  ]);
+  final List<Ride> result = [];
+  for (final response in responses) {
+    if (response.statusCode == 200 && response.data != null) {
+      final list = response.data as List<dynamic>;
+      result.addAll(list.map((e) => Ride.fromJson(e as Map<String, dynamic>)));
+    }
   }
-  throw Exception('Impossibile caricare l\'elenco delle tue corse');
+  // Ordina per orario di partenza
+  result.sort((a, b) => a.departureTime.compareTo(b.departureTime));
+  return result;
 });
 
 class MyRidesService {
