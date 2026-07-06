@@ -4,7 +4,7 @@ import 'auth_service.dart';
 import '../constants/api_constants.dart';
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  final authService = ref.read(authServiceProvider);
+  final authService = ref.watch(authServiceProvider);
   return ApiClient(authService);
 });
 
@@ -36,7 +36,29 @@ class ApiClient {
         if (e.response?.statusCode == 401) {
           await _authService.deleteToken();
         }
-        return handler.next(e);
+
+        // Gestione centralizzata degli errori di rete
+        String errorMessage = 'Si è verificato un errore imprevisto.';
+        if (e.type == DioExceptionType.connectionTimeout ||
+            e.type == DioExceptionType.sendTimeout ||
+            e.type == DioExceptionType.receiveTimeout) {
+          errorMessage = 'Connessione al server scaduta. Riprova.';
+        } else if (e.type == DioExceptionType.connectionError) {
+          errorMessage = 'Impossibile connettersi al server. Verifica la tua connessione internet.';
+        } else if (e.response == null) {
+          errorMessage = 'Errore di rete. Controlla la tua connessione.';
+        } else {
+          return handler.next(e);
+        }
+
+        final customException = DioException(
+          requestOptions: e.requestOptions,
+          response: e.response,
+          type: e.type,
+          error: e.error,
+          message: errorMessage,
+        );
+        return handler.next(customException);
       },
     ));
   }

@@ -31,7 +31,7 @@ class MyRidesService {
         throw Exception('Errore durante l\'avvio della corsa');
       }
     } on DioException catch (e) {
-      final msg = e.response?.data?['message'] ?? 'Impossibile avviare la corsa';
+      final msg = e.response?.data?['message'] ?? e.message ?? 'Impossibile avviare la corsa';
       throw Exception(msg);
     }
   }
@@ -47,7 +47,7 @@ class MyRidesService {
         throw Exception('Errore durante il completamento della corsa');
       }
     } on DioException catch (e) {
-      final msg = e.response?.data?['message'] ?? 'Impossibile completare la corsa';
+      final msg = e.response?.data?['message'] ?? e.message ?? 'Impossibile completare la corsa';
       throw Exception(msg);
     }
   }
@@ -62,7 +62,7 @@ class MyRidesService {
         throw Exception('Errore durante l\'eliminazione della corsa');
       }
     } on DioException catch (e) {
-      final msg = e.response?.data?['message'] ?? 'Impossibile eliminare la corsa';
+      final msg = e.response?.data?['message'] ?? e.message ?? 'Impossibile eliminare la corsa';
       throw Exception(msg);
     }
   }

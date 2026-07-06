@@ -13,15 +13,24 @@ class AuthState {
   final AuthStatus status;
   final String? errorMessage;
   final bool isNewLogin;
+  /// true se l'utente ha già completato il flusso di benvenuto su questo dispositivo
+  final bool isOnboardingCompleted;
 
   AuthState({
     required this.status,
     this.errorMessage,
     this.isNewLogin = false,
+    this.isOnboardingCompleted = false,
   });
 
-  factory AuthState.authenticated({bool isNewLogin = false}) =>
-      AuthState(status: AuthStatus.authenticated, isNewLogin: isNewLogin);
+  factory AuthState.authenticated({
+    bool isNewLogin = false,
+    bool isOnboardingCompleted = false,
+  }) => AuthState(
+    status: AuthStatus.authenticated,
+    isNewLogin: isNewLogin,
+    isOnboardingCompleted: isOnboardingCompleted,
+  );
   factory AuthState.unauthenticated({String? error}) =>
       AuthState(status: AuthStatus.unauthenticated, errorMessage: error);
   factory AuthState.loading() => AuthState(status: AuthStatus.loading);
@@ -30,33 +39,40 @@ class AuthState {
     AuthStatus? status,
     String? errorMessage,
     bool? isNewLogin,
+    bool? isOnboardingCompleted,
   }) {
     return AuthState(
       status: status ?? this.status,
       errorMessage: errorMessage ?? this.errorMessage,
       isNewLogin: isNewLogin ?? this.isNewLogin,
+      isOnboardingCompleted: isOnboardingCompleted ?? this.isOnboardingCompleted,
     );
   }
 }
 
 final authControllerProvider = StateNotifierProvider<AuthController, AuthState>((ref) {
-  return AuthController(
-    ref.read(apiClientProvider),
-    ref.read(authServiceProvider),
-  );
+  final apiClient = ref.watch(apiClientProvider);
+  final authService = ref.watch(authServiceProvider);
+  return AuthController(apiClient, authService, ref);
 });
 
 class AuthController extends StateNotifier<AuthState> {
   final ApiClient _apiClient;
   final AuthService _authService;
+  final Ref _ref;
 
-  AuthController(this._apiClient, this._authService) : super(AuthState.loading()) {
+  AuthController(this._apiClient, this._authService, this._ref) : super(AuthState.loading()) {
     _init();
   }
 
   Future<void> _init() async {
     final isAuthenticated = await _authService.isAuthenticated();
-    state = isAuthenticated ? AuthState.authenticated() : AuthState.unauthenticated();
+    if (isAuthenticated) {
+      final completed = await _authService.isOnboardingCompleted();
+      state = AuthState.authenticated(isOnboardingCompleted: completed);
+    } else {
+      state = AuthState.unauthenticated();
+    }
   }
 
   Future<bool> login(String username, String password) async {
@@ -74,14 +90,15 @@ class AuthController extends StateNotifier<AuthState> {
         final token = response.data['token'];
         if (token != null) {
           await _authService.saveToken(token);
-          state = AuthState.authenticated(isNewLogin: true);
+          final completed = await _authService.isOnboardingCompleted();
+          state = AuthState.authenticated(isNewLogin: true, isOnboardingCompleted: completed);
           return true;
         }
       }
       state = AuthState.unauthenticated(error: 'Errore durante il login');
       return false;
     } on DioException catch (e) {
-      final message = e.response?.data?['message'] ?? 'Credenziali errate o errore di rete';
+      final message = e.response?.data?['message'] ?? e.message ?? 'Credenziali errate o errore di rete';
       state = AuthState.unauthenticated(error: message);
       return false;
     } catch (e) {
@@ -106,14 +123,15 @@ class AuthController extends StateNotifier<AuthState> {
         final token = response.data['token'];
         if (token != null) {
           await _authService.saveToken(token);
-          state = AuthState.authenticated(isNewLogin: true);
+          final completed = await _authService.isOnboardingCompleted();
+          state = AuthState.authenticated(isNewLogin: true, isOnboardingCompleted: completed);
           return true;
         }
       }
       state = AuthState.unauthenticated(error: 'Errore durante la registrazione');
       return false;
     } on DioException catch (e) {
-      final message = e.response?.data?['message'] ?? 'Errore di rete o utente già esistente';
+      final message = e.response?.data?['message'] ?? e.message ?? 'Errore di rete o utente già esistente';
       state = AuthState.unauthenticated(error: message);
       return false;
     } catch (e) {
@@ -124,25 +142,31 @@ class AuthController extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     await _authService.deleteToken();
+    // Invalida il profilo in cache: il prossimo login ricaricherà i dati del nuovo utente
+    _ref.invalidate(profileControllerProvider);
     state = AuthState.unauthenticated();
   }
 
   Future<void> completeWelcome() async {
-    state = state.copyWith(isNewLogin: false);
     await _authService.setOnboardingCompleted();
+    state = state.copyWith(isNewLogin: false, isOnboardingCompleted: true);
   }
 }
 
-final userProfileProvider = FutureProvider<UserProfile?>((ref) async {
+final userProfileProvider = FutureProvider<UserProfile?>((ref) {
   final authState = ref.watch(authControllerProvider);
   if (authState.status != AuthStatus.authenticated) {
-    return null;
+    return Future.value(null);
   }
+  // profileControllerProvider è un StateNotifier con stato AsyncValue<UserProfile?>
+  // .when() converte l'AsyncValue in un Future: in loading triggera fetchProfile(),
+  // in data/error ritorna il valore già disponibile — nessuna chiamata duplicata.
   final profileState = ref.watch(profileControllerProvider);
+  final notifier = ref.read(profileControllerProvider.notifier);
   return profileState.when(
-    data: (profile) => profile,
-    error: (err, stack) => Future.error(err, stack),
-    loading: () => ref.read(profileControllerProvider.notifier).fetchProfile(),
+    data: (profile) => Future.value(profile),
+    error: Future.error,
+    loading: () => notifier.fetchProfile(),
   );
 });
 

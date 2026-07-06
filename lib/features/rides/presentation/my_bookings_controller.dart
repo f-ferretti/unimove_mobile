@@ -109,7 +109,7 @@ class MyBookingsService {
         throw Exception('Errore durante la cancellazione della prenotazione');
       }
     } on DioException catch (e) {
-      final msg = e.response?.data?['message'] ?? 'Impossibile cancellare la prenotazione';
+      final msg = e.response?.data?['message'] ?? e.message ?? 'Impossibile cancellare la prenotazione';
       throw Exception(msg);
     }
   }

@@ -16,7 +16,6 @@ import '../../features/auth/presentation/welcome_routes_screen.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../shared/widgets/main_scaffold.dart';
 import '../../shared/theme/app_theme.dart';
-import '../services/auth_service.dart';
 
 /// Un Listenable reattivo per notificare GoRouter quando lo stato di autenticazione cambia
 class RouterTransitionListener extends ChangeNotifier {
@@ -30,12 +29,13 @@ class RouterTransitionListener extends ChangeNotifier {
 final routerTransitionListenerProvider = Provider((ref) => RouterTransitionListener(ref));
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final listenable = ref.read(routerTransitionListenerProvider);
+  // Watch instead of read to ensure the router rebuilds/re-evaluates when listenable changes
+  final listenable = ref.watch(routerTransitionListenerProvider);
 
   return GoRouter(
     initialLocation: '/splash',
     refreshListenable: listenable,
-    redirect: (context, state) async {
+    redirect: (context, state) {
       final authState = ref.read(authControllerProvider);
       final status = authState.status;
       final location = state.matchedLocation;
@@ -56,9 +56,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       // Se l'utente è loggato e si trova su una rotta iniziale (login o splash)
+      // Legge isOnboardingCompleted direttamente dall'AuthState (già caricato in _init/login)
       if (location == '/login' || location == '/splash') {
-        final completed = await ref.read(authServiceProvider).isOnboardingCompleted();
-        return completed ? '/home' : '/benvenuto';
+        return authState.isOnboardingCompleted ? '/home' : '/benvenuto';
       }
 
       return null;
