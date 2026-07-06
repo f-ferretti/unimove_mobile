@@ -99,8 +99,12 @@ class _SearchRideScreenState extends ConsumerState<SearchRideScreen> {
         queryParams['arrivalCity'] = _arrivalCityController.text.trim();
       }
       if (_selectedDate != null) {
-        // Format date to ISO date: yyyy-MM-dd
-        queryParams['date'] = _selectedDate!.toIso8601String().split('T').first;
+        // IMPORTANTE: NON usare toIso8601String() perché converte in UTC e in Italia (UTC+2)
+        // "7 luglio" diventa "2026-07-06T22:00:00Z" → split → "2026-07-06" → 0 risultati.
+        // Si usa year/month/day locali direttamente.
+        final d = _selectedDate!;
+        queryParams['date'] =
+            '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
       }
 
       final apiClient = ref.read(apiClientProvider);
