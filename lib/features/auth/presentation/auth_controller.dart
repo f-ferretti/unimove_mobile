@@ -5,6 +5,9 @@ import '../../../core/services/auth_service.dart';
 
 import '../domain/user_profile.dart';
 import '../../profile/presentation/profile_controller.dart';
+import '../../rides/presentation/my_rides_controller.dart';
+import '../../rides/presentation/my_bookings_controller.dart';
+import '../../home/presentation/home_screen.dart';
 
 /// Stato dell'autenticazione
 enum AuthStatus { authenticated, unauthenticated, loading }
@@ -142,8 +145,12 @@ class AuthController extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     await _authService.deleteToken();
-    // Invalida il profilo in cache: il prossimo login ricaricherà i dati del nuovo utente
+    // Invalida tutti i provider legati all'utente per evitare che
+    // i dati del vecchio account vengano mostrati al nuovo utente
     _ref.invalidate(profileControllerProvider);
+    _ref.invalidate(myRidesProvider);
+    _ref.invalidate(myBookingsProvider);
+    _ref.invalidate(archivedRidesProvider);
     state = AuthState.unauthenticated();
   }
 
