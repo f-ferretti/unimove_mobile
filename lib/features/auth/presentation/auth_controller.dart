@@ -116,7 +116,7 @@ class AuthController extends StateNotifier<AuthState> {
       state = AuthState.unauthenticated(error: 'Errore durante il login');
       return false;
     } on DioException catch (e) {
-      final message = e.response?.data?['message'] ?? e.message ?? 'Credenziali errate o errore di rete';
+      final message = e.response?.data?['error'] ?? e.response?.data?['message'] ?? e.message ?? 'Credenziali errate o errore di rete';
       state = AuthState.unauthenticated(error: message);
       return false;
     } catch (e) {
@@ -149,7 +149,7 @@ class AuthController extends StateNotifier<AuthState> {
       state = AuthState.unauthenticated(error: 'Errore durante la registrazione');
       return false;
     } on DioException catch (e) {
-      final message = e.response?.data?['message'] ?? e.message ?? 'Errore di rete o utente già esistente';
+      final message = e.response?.data?['error'] ?? e.response?.data?['message'] ?? e.message ?? 'Errore di rete o utente già esistente';
       state = AuthState.unauthenticated(error: message);
       return false;
     } catch (e) {

@@ -204,7 +204,7 @@ class _CreateRideScreenState extends ConsumerState<CreateRideScreen> {
         throw Exception("Stato risposta non valido dal server");
       }
     } on DioException catch (e) {
-      final errorMessage = e.response?.data?['message'] ?? e.message ?? 'Si è verificato un errore durante la creazione della corsa.';
+      final errorMessage = e.response?.data?['error'] ?? e.response?.data?['message'] ?? e.message ?? 'Si è verificato un errore durante la creazione della corsa.';
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

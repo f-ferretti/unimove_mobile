@@ -125,7 +125,7 @@ class _SearchRideScreenState extends ConsumerState<SearchRideScreen> {
         throw Exception("Risposta non valida dal server");
       }
     } on DioException catch (e) {
-      final errorMessage = e.response?.data?['message'] ?? e.message ?? 'Si è verificato un errore durante la ricerca.';
+      final errorMessage = e.response?.data?['error'] ?? e.response?.data?['message'] ?? e.message ?? 'Si è verificato un errore durante la ricerca.';
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -391,7 +391,7 @@ class _SearchRideScreenState extends ConsumerState<SearchRideScreen> {
                                     throw Exception('Impossibile completare la prenotazione');
                                   }
                                 } on DioException catch (e) {
-                                  final errMsg = e.response?.data?['message'] ?? e.message ?? 'Errore durante la prenotazione.';
+                                  final errMsg = e.response?.data?['error'] ?? e.response?.data?['message'] ?? e.message ?? 'Errore durante la prenotazione.';
                                   if (!context.mounted) return;
                                   Navigator.pop(context);
                                   ScaffoldMessenger.of(context).showSnackBar(
