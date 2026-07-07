@@ -238,11 +238,10 @@ class _SearchRideScreenState extends ConsumerState<SearchRideScreen> {
       return;
     }
 
-    // Collect all options for hotspots
+    // Collect all options for hotspots (departure city and intermediate stops)
     final hotspotOptions = <String>[];
     hotspotOptions.add(ride.departureCity); // Default meeting point is departure city
     hotspotOptions.addAll(ride.hotspots);
-    hotspotOptions.add(ride.arrivalCity); // Arrival city can also be selected
 
     String selectedHotspot = hotspotOptions.first;
     bool isSubmitting = false;
@@ -294,11 +293,8 @@ class _SearchRideScreenState extends ConsumerState<SearchRideScreen> {
                           itemBuilder: (context, index) {
                             final option = hotspotOptions[index];
                             final isDeparture = index == 0;
-                            final isArrival = index == hotspotOptions.length - 1;
 
-                            String subLabel = 'Fermata intermedia';
-                            if (isDeparture) subLabel = 'Punto di partenza';
-                            if (isArrival && hotspotOptions.length > 2) subLabel = 'Destinazione finale';
+                            final subLabel = isDeparture ? 'Punto di partenza' : 'Fermata intermedia';
 
                             return RadioListTile<String>(
                               value: option,
