@@ -242,6 +242,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final userNameAsync = ref.watch(userNameProvider);
     final userProfileAsync = ref.watch(userProfileProvider);
+    final myRidesAsync = ref.watch(myRidesProvider);
+    final myBookingsAsync = ref.watch(myBookingsProvider);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -363,61 +365,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           ),
           const SizedBox(height: 32),
-
           // Reminder Card
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceDark,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.deepBlack,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Icon(Icons.calendar_today_outlined, color: AppColors.universityGreen),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Promemoria',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Hai due eventi in programma per le prossime ore',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(140, 40),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                        ),
-                        child: const Text('Visualizza dettagli', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _buildReminderCard(myRidesAsync, myBookingsAsync),
           const SizedBox(height: 32),
 
           // Tab Selection
@@ -445,6 +394,113 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           
           const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+
+
+  Widget _buildReminderCard(
+    AsyncValue<List<Ride>> myRidesAsync,
+    AsyncValue<List<PassengerBooking>> myBookingsAsync,
+  ) {
+    if (myRidesAsync.isLoading || myBookingsAsync.isLoading) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceDark,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        ),
+        child: const Row(
+          children: [
+            Skeleton(width: 48, height: 48, borderRadius: 16),
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Skeleton(width: 100, height: 16, borderRadius: 4),
+                  SizedBox(height: 6),
+                  Skeleton(width: 160, height: 14, borderRadius: 4),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final myRides = myRidesAsync.value ?? [];
+    final myBookings = myBookingsAsync.value ?? [];
+    final now = DateTime.now();
+
+    // Corse come guidatore attive (OPEN o IN_PROGRESS)
+    final upcomingDriverRides = myRides.where((ride) =>
+        (ride.status == 'OPEN' || ride.status == 'IN_PROGRESS') &&
+        ride.departureTime.isAfter(now.subtract(const Duration(hours: 2)))).toList();
+
+    // Prenotazioni come passeggero attive (OPEN o IN_PROGRESS)
+    final upcomingPassengerBookings = myBookings.where((b) {
+      final ride = b.ride;
+      if (ride == null) return false;
+      return (ride.status == 'OPEN' || ride.status == 'IN_PROGRESS') &&
+          ride.departureTime.isAfter(now.subtract(const Duration(hours: 2)));
+    }).toList();
+
+    final totalUpcomingEvents = upcomingDriverRides.length + upcomingPassengerBookings.length;
+    final hasEvents = totalUpcomingEvents > 0;
+
+    final title = hasEvents ? 'Promemoria' : 'Nessun viaggio';
+    final subtitle = hasEvents
+        ? 'Hai $totalUpcomingEvents ${totalUpcomingEvents == 1 ? 'viaggio in programma' : 'viaggi in programma'} per le prossime ore.'
+        : 'Non hai viaggi in programma per le prossime ore.';
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceDark,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.deepBlack,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              hasEvents ? Icons.calendar_today_outlined : Icons.explore_outlined,
+              color: AppColors.universityGreen,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
