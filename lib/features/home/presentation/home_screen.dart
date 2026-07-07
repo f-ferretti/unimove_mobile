@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../auth/presentation/auth_controller.dart';
@@ -251,16 +252,68 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // User Header
           Row(
             children: [
-              Container(
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.surfaceDark,
+              userProfileAsync.when(
+                data: (profile) {
+                  final avatarUrl = profile?.avatarUrl;
+                  if (avatarUrl != null && avatarUrl.startsWith('data:image')) {
+                    try {
+                      final base64Str = avatarUrl.split(',').last;
+                      final bytes = base64Decode(base64Str);
+                      return Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.universityGreen, width: 2),
+                        ),
+                        child: CircleAvatar(
+                          radius: 35,
+                          backgroundImage: MemoryImage(bytes),
+                        ),
+                      );
+                    } catch (_) {}
+                  }
+                  return Container(
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.surfaceDark,
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: const CircleAvatar(
+                      radius: 35,
+                      backgroundColor: AppColors.deepBlack,
+                      child: Icon(Icons.person_outline, size: 40, color: AppColors.universityGreen),
+                    ),
+                  );
+                },
+                loading: () => Container(
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.surfaceDark,
+                  ),
+                  padding: const EdgeInsets.all(2),
+                  child: const CircleAvatar(
+                    radius: 35,
+                    backgroundColor: AppColors.deepBlack,
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.universityGreen,
+                      ),
+                    ),
+                  ),
                 ),
-                padding: const EdgeInsets.all(2),
-                child: const CircleAvatar(
-                  radius: 35,
-                  backgroundColor: AppColors.deepBlack,
-                  child: Icon(Icons.person_outline, size: 40, color: AppColors.universityGreen),
+                error: (_, __) => Container(
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.surfaceDark,
+                  ),
+                  padding: const EdgeInsets.all(2),
+                  child: const CircleAvatar(
+                    radius: 35,
+                    backgroundColor: AppColors.deepBlack,
+                    child: Icon(Icons.person_outline, size: 40, color: AppColors.universityGreen),
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
