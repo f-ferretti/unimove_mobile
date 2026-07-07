@@ -65,6 +65,9 @@ class AuthController extends StateNotifier<AuthState> {
   final Ref _ref;
 
   AuthController(this._apiClient, this._authService, this._ref) : super(AuthState.loading()) {
+    // Registra il callback: quando il server risponde 401 (sessione scaduta),
+    // l'ApiClient chiama questa funzione che forza il logout senza dipendenze circolari
+    _apiClient.onUnauthorized = _handleSessionExpired;
     _init();
   }
 
@@ -76,6 +79,18 @@ class AuthController extends StateNotifier<AuthState> {
     } else {
       state = AuthState.unauthenticated();
     }
+  }
+
+  /// Chiamato dall'interceptor Dio quando il server risponde 401.
+  /// Aggiorna lo stato a unauthenticated e pulisce la cache dei provider
+  /// così il router reindirizza al login automaticamente.
+  void _handleSessionExpired() {
+    if (state.status != AuthStatus.authenticated) return;
+    state = AuthState.unauthenticated();
+    _ref.invalidate(profileControllerProvider);
+    _ref.invalidate(myRidesProvider);
+    _ref.invalidate(myBookingsProvider);
+    _ref.invalidate(archivedRidesProvider);
   }
 
   Future<bool> login(String username, String password) async {

@@ -605,25 +605,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               _buildSkeletonEventCard(),
             ],
           ),
-          error: (err, stack) => Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 40),
-              child: Column(
-                children: [
-                  Text(
-                    'Errore nel caricamento dell\'archivio: $err',
-                    style: const TextStyle(color: AppColors.textMuted),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: () => ref.invalidate(archivedRidesProvider),
-                    child: const Text('Riprova'),
-                  ),
-                ],
+          error: (err, stack) {
+            String displayMessage;
+            final errStr = err.toString().toLowerCase();
+            if (errStr.contains('403') || errStr.contains('non autorizzato') || errStr.contains('accesso')) {
+              displayMessage = 'Sessione non valida. Prova a effettuare di nuovo il login.';
+            } else if (errStr.contains('timeout') || errStr.contains('connessione') || errStr.contains('rete')) {
+              displayMessage = 'Impossibile raggiungere il server. Controlla la connessione.';
+            } else if (errStr.contains('500')) {
+              displayMessage = 'Errore del server. Riprova più tardi.';
+            } else {
+              displayMessage = 'Errore nel caricamento dell\'archivio. Riprova.';
+            }
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Column(
+                  children: [
+                    const Icon(Icons.cloud_off_outlined, size: 48, color: AppColors.textMuted),
+                    const SizedBox(height: 12),
+                    Text(
+                      displayMessage,
+                      style: const TextStyle(color: AppColors.textMuted),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: () => ref.invalidate(archivedRidesProvider),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Riprova'),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       default:
         return const SizedBox.shrink();
