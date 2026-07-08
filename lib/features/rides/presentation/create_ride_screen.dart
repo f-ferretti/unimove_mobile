@@ -39,6 +39,7 @@ class _CreateRideScreenState extends ConsumerState<CreateRideScreen> {
   DateTime? _arrivalTimeEstDateTime;
   int _totalSeats = 4;
   bool _isLoading = false;
+  String? _validationErrorMessage;
 
   // Travel preferences booleans (true = Yes, false = No)
   bool _music = true;
@@ -114,10 +115,16 @@ class _CreateRideScreenState extends ConsumerState<CreateRideScreen> {
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) {
+      setState(() {
+        _validationErrorMessage = 'Compila correttamente tutti i campi obbligatori (*)';
+      });
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _validationErrorMessage = null;
+    });
 
     try {
       final hotspots = <String>[];
@@ -477,7 +484,16 @@ class _CreateRideScreenState extends ConsumerState<CreateRideScreen> {
                     hintText: 'Es: musica rock, bagaglio piccolo consentito...',
                   ),
                 ),
-                const SizedBox(height: 32),
+                if (_validationErrorMessage != null) ...[
+                  Center(
+                    child: Text(
+                      _validationErrorMessage!,
+                      style: const TextStyle(color: Colors.redAccent, fontSize: 14, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
                 // Pulsante Crea Corsa
                 SizedBox(

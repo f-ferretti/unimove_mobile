@@ -166,6 +166,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           controller: _usernameController,
                           style: const TextStyle(color: AppColors.textPrimary),
                           decoration: const InputDecoration(hintText: 'n.cognome'),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Inserisci lo username';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 20),
 
@@ -186,6 +192,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                             ),
                           ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Inserisci la password';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 20),
 
@@ -230,6 +242,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const Spacer(), // Pushes everything apart
                         const SizedBox(height: 32),
+
+                        if (authState.errorMessage != null) ...[
+                          Text(
+                            authState.errorMessage!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.redAccent,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
 
                         // Bottone Accedi
                         ElevatedButton(
