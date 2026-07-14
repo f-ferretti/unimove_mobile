@@ -10,6 +10,7 @@ import 'leave_review_dialog.dart';
 import '../../../core/services/api_client.dart';
 import '../../rides/presentation/my_rides_controller.dart';
 import '../../rides/presentation/my_bookings_controller.dart';
+import '../../rides/presentation/ride_map_screen.dart';
 
 final archivedRidesProvider = FutureProvider<List<Ride>>((ref) async {
   // Guard: non effettuare chiamate API se l'utente non è autenticato
@@ -236,6 +237,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     } finally {
       if (mounted) setState(() => _activeBookingActionId = null);
     }
+  }
+
+  void _showMapScreen(Ride ride, {required bool isDriver}) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => RideMapScreen(ride: ride, isDriver: isDriver),
+      ),
+    );
   }
 
   @override
@@ -833,6 +842,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         actions.add(_buildActionButton('Avvia', () => _handleStartRide(ride), isPrimary: true));
         actions.add(_buildActionButton('Elimina', () => _confirmAndDeleteRide(ride)));
       } else if (ride.status == 'IN_PROGRESS') {
+        actions.add(_buildActionButton('Mappa', () => _showMapScreen(ride, isDriver: true)));
         actions.add(_buildActionButton('Completa', () => _handleCompleteRide(ride), isPrimary: true));
       }
     }
@@ -1072,6 +1082,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              if (isRideInProgress && ride != null)
+                _buildActionButton('Mappa', () => _showMapScreen(ride, isDriver: false)),
               if (isActionLoading)
                 const SizedBox(
                   width: 24,
