@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
+import '../../features/home/presentation/notifications_controller.dart';
 
-class MainScaffold extends StatelessWidget {
+class MainScaffold extends ConsumerWidget {
   final Widget body;
   final String title;
   final String currentRoute;
@@ -15,27 +17,44 @@ class MainScaffold extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bool showAppBar = currentRoute != '/corse/cerca' && currentRoute != '/chat';
+
+    // Watch unread notifications count to display a badge
+    final unreadCount = ref.watch(notificationsProvider).maybeWhen(
+          data: (list) => list.where((n) => !n.isRead).length,
+          orElse: () => 0,
+        );
+
     return Scaffold(
       backgroundColor: AppColors.deepBlack,
-      appBar: AppBar(
-        backgroundColor: AppColors.deepBlack,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.white),
-          onPressed: () => context.go('/impostazioni'),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none_outlined, color: Colors.white),
-            onPressed: () => context.push('/notifiche'),
-          ),
-        ],
-      ),
+      appBar: showAppBar
+          ? AppBar(
+              backgroundColor: AppColors.deepBlack,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white),
+                onPressed: () => context.go('/impostazioni'),
+              ),
+              title: Text(
+                title,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              actions: [
+                IconButton(
+                  icon: unreadCount > 0
+                      ? Badge(
+                          label: Text(unreadCount.toString()),
+                          backgroundColor: Colors.redAccent,
+                          textColor: Colors.white,
+                          child: const Icon(Icons.notifications_none_outlined, color: Colors.white),
+                        )
+                      : const Icon(Icons.notifications_none_outlined, color: Colors.white),
+                  onPressed: () => context.push('/notifiche'),
+                ),
+              ],
+            )
+          : null,
       body: body,
       bottomNavigationBar: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
