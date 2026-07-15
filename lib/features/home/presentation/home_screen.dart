@@ -295,35 +295,79 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final myRidesAsync = ref.watch(myRidesProvider);
     final myBookingsAsync = ref.watch(myBookingsProvider);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 20),
-          // User Header
-          Row(
-            children: [
-              userProfileAsync.when(
-                data: (profile) {
-                  final avatarUrl = profile?.avatarUrl;
-                  if (avatarUrl != null && avatarUrl.startsWith('data:image')) {
-                    try {
-                      final base64Str = avatarUrl.split(',').last;
-                      final bytes = base64Decode(base64Str);
-                      return Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.universityGreen, width: 2),
+    return RefreshIndicator(
+      onRefresh: () async {
+        await Future.wait([
+          ref.refresh(myRidesProvider.future),
+          ref.refresh(myBookingsProvider.future),
+          ref.refresh(userProfileProvider.future),
+        ]);
+        ref.invalidate(rideBookingsProvider);
+      },
+      color: AppColors.universityGreen,
+      backgroundColor: AppColors.surfaceDark,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 20),
+            // User Header
+            Row(
+              children: [
+                userProfileAsync.when(
+                  data: (profile) {
+                    final avatarUrl = profile?.avatarUrl;
+                    if (avatarUrl != null && avatarUrl.startsWith('data:image')) {
+                      try {
+                        final base64Str = avatarUrl.split(',').last;
+                        final bytes = base64Decode(base64Str);
+                        return Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.universityGreen, width: 2),
+                          ),
+                          child: CircleAvatar(
+                            radius: 35,
+                            backgroundImage: MemoryImage(bytes),
+                          ),
+                        );
+                      } catch (_) {}
+                    }
+                    return Container(
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.surfaceDark,
+                      ),
+                      padding: const EdgeInsets.all(2),
+                      child: const CircleAvatar(
+                        radius: 35,
+                        backgroundColor: AppColors.deepBlack,
+                        child: Icon(Icons.person_outline, size: 40, color: AppColors.universityGreen),
+                      ),
+                    );
+                  },
+                  loading: () => Container(
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.surfaceDark,
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: const CircleAvatar(
+                      radius: 35,
+                      backgroundColor: AppColors.deepBlack,
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.universityGreen,
                         ),
-                        child: CircleAvatar(
-                          radius: 35,
-                          backgroundImage: MemoryImage(bytes),
-                        ),
-                      );
-                    } catch (_) {}
-                  }
-                  return Container(
+                      ),
+                    ),
+                  ),
+                  error: (_, __) => Container(
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: AppColors.surfaceDark,
@@ -334,117 +378,86 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       backgroundColor: AppColors.deepBlack,
                       child: Icon(Icons.person_outline, size: 40, color: AppColors.universityGreen),
                     ),
-                  );
-                },
-                loading: () => Container(
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.surfaceDark,
-                  ),
-                  padding: const EdgeInsets.all(2),
-                  child: const CircleAvatar(
-                    radius: 35,
-                    backgroundColor: AppColors.deepBlack,
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.universityGreen,
-                      ),
-                    ),
                   ),
                 ),
-                error: (_, __) => Container(
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.surfaceDark,
-                  ),
-                  padding: const EdgeInsets.all(2),
-                  child: const CircleAvatar(
-                    radius: 35,
-                    backgroundColor: AppColors.deepBlack,
-                    child: Icon(Icons.person_outline, size: 40, color: AppColors.universityGreen),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  userNameAsync.when(
-                    data: (name) => Text(
-                      'Ciao ${name ?? 'User'}',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    loading: () => const Row(
-                      children: [
-                        Text(
-                          'Ciao ',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    userNameAsync.when(
+                      data: (name) => Text(
+                        'Ciao ${name ?? 'User'}',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
                         ),
-                        Skeleton(width: 80, height: 24, borderRadius: 6),
-                      ],
-                    ),
-                    error: (_, __) => const Text(
-                      'Ciao User',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                      ),
+                      loading: () => const Row(
+                        children: [
+                          Text(
+                            'Ciao ',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Skeleton(width: 80, height: 24, borderRadius: 6),
+                        ],
+                      ),
+                      error: (_, __) => const Text(
+                        'Ciao User',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ),
-                  ),
-                  const Text(
-                    'Inizia il tuo viaggio!',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppColors.textSecondary,
+                    const Text(
+                      'Inizia il tuo viaggio!',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          // Reminder Card
-          _buildReminderCard(myRidesAsync, myBookingsAsync),
-          const SizedBox(height: 32),
-
-          // Tab Selection
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildTabItem(0, 'I miei eventi', Icons.event_note_outlined),
-              _buildTabItem(1, 'Prenotazioni', Icons.assignment_outlined),
-              _buildTabItem(2, 'Archivio', Icons.archive_outlined),
-            ],
-          ),
-          
-          const SizedBox(height: 24),
-          
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _getTabName(_currentIndex),
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-              ),
-              const SizedBox(height: 16),
-              _buildTabContent(userProfileAsync),
-            ],
-          ),
-          
-          const SizedBox(height: 20),
-        ],
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+            // Reminder Card
+            _buildReminderCard(myRidesAsync, myBookingsAsync),
+            const SizedBox(height: 32),
+  
+            // Tab Selection
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildTabItem(0, 'I miei eventi', Icons.event_note_outlined),
+                _buildTabItem(1, 'Prenotazioni', Icons.assignment_outlined),
+                _buildTabItem(2, 'Archivio', Icons.archive_outlined),
+              ],
+            ),
+            
+            const SizedBox(height: 24),
+            
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _getTabName(_currentIndex),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                ),
+                const SizedBox(height: 16),
+                _buildTabContent(userProfileAsync),
+              ],
+            ),
+            
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

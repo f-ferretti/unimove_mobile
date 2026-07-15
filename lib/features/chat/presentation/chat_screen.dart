@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'chat_controller.dart';
 import '../../auth/domain/user_profile.dart';
 import '../../auth/presentation/auth_controller.dart';
@@ -498,18 +500,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  void _openMap(double latitude, double longitude) {
-    // Standard clipboard copy fallback to avoid external package dependencies
+  void _openMap(double latitude, double longitude) async {
     final coordinateString = '$latitude, $longitude';
-    // Copy coordinates to clipboard
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Coordinate copiate: $coordinateString. Incolla sulle mappe per visualizzare.'),
-        backgroundColor: AppColors.universityGreen,
-        duration: const Duration(seconds: 4),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    
+    // 1. Copy to Clipboard (using native Services)
+    await Clipboard.setData(ClipboardData(text: coordinateString));
+
+    // 2. Launch external maps application
+    final Uri googleMapsUrl = Uri.parse("https://www.google.com/maps/search/?api=1&query=$latitude,$longitude");
+    final Uri appleMapsUrl = Uri.parse("https://maps.apple.com/?q=$latitude,$longitude");
+
+    try {
+      if (await canLaunchUrl(googleMapsUrl)) {
+        await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+      } else if (await canLaunchUrl(appleMapsUrl)) {
+        await launchUrl(appleMapsUrl, mode: LaunchMode.externalApplication);
+      } else {
+        throw Exception("No map application available");
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Coordinate copiate: $coordinateString. Incolla sulle mappe per visualizzare.'),
+          backgroundColor: AppColors.universityGreen,
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   String _formatDate(DateTime date) {

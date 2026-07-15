@@ -24,6 +24,9 @@ dependencies:
   # Navigazione
   go_router: ^14.2.7
 
+  # Utilità di sistema
+  url_launcher: ^6.2.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
